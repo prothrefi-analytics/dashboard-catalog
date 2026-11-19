@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Portal</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: "Segoe UI", Arial, sans-serif; }
+  body {
+    background: linear-gradient(135deg, #1f3a5f 0%, #2e6da4 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: #1f2937;
+  }
+  .view { display: none; width: 100%; height: 100%; }
+  .view.active { display: flex; }
+
+  /* ---------- Cards ---------- */
+  .center { align-items: center; justify-content: center; padding: 16px; }
+  .card {
+    background: #fff; border-radius: 14px; padding: 36px 32px;
+    width: 100%; max-width: 380px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.25);
+    text-align: center;
+  }
+  .card h1 { font-size: 22px; margin-bottom: 6px; color: #1f3a5f; }
+  .card p.sub { font-size: 13px; color: #6b7280; margin-bottom: 22px; }
+  .logo {
+    width: 54px; height: 54px; border-radius: 50%;
+    background: #2e6da4; color: #fff; font-size: 26px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+  }
+  label { display: block; text-align: left; font-size: 12px; font-weight: 600; margin: 12px 0 4px; color: #374151; }
+  input {
+    width: 100%; padding: 10px 12px; font-size: 14px;
+    border: 1px solid #d1d5db; border-radius: 8px; outline: none;
+  }
+  input:focus { border-color: #2e6da4; box-shadow: 0 0 0 3px rgba(46,109,164,.2); }
+  .error { color: #b91c1c; font-size: 12px; min-height: 18px; margin-top: 10px; }
+
+  button {
+    cursor: pointer; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600; padding: 11px 16px;
+    transition: transform .05s, background .15s;
+  }
+  button:active { transform: scale(.98); }
+  .btn-primary { background: #2e6da4; color: #fff; width: 100%; margin-top: 8px; }
+  .btn-primary:hover { background: #245a88; }
+
+  /* ---------- Menu ---------- */
+  .menu-buttons { display: flex; flex-direction: column; gap: 12px; margin: 8px 0 18px; }
+  .btn-dash { background: #eef4fb; color: #1f3a5f; border: 1px solid #c7dbef; padding: 16px; font-size: 15px; }
+  .btn-dash:hover { background: #dcebf9; }
+  .btn-link { background: none; color: #6b7280; font-size: 13px; text-decoration: underline; }
+
+  /* ---------- Dashboard view ---------- */
+  #dashView { flex-direction: column; background: #f3f4f6; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #1f3a5f; color: #fff; padding: 10px 16px; gap: 12px;
+  }
+  .topbar h2 { font-size: 16px; font-weight: 600; }
+  .topbar .actions { display: flex; gap: 8px; }
+  .btn-back { background: #fff; color: #1f3a5f; padding: 8px 14px; }
+  .btn-back:hover { background: #e5edf6; }
+  .btn-exit { background: #dc2626; color: #fff; padding: 8px 14px; }
+  .btn-exit:hover { background: #b91c1c; }
+  iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginView" class="view active center">
+  <form class="card" id="loginForm" autocomplete="off">
+    <div class="logo">&#128202;</div>
+    <h1>Dashboard Portal</h1>
+    <p class="sub">Please sign in to continue</p>
+
+    <label for="username">Username</label>
+    <input id="username" type="text" placeholder="Enter username">
+
+    <label for="password">Password</label>
+    <input id="password" type="password" placeholder="Enter password">
+
+    <div class="error" id="loginError"></div>
+    <button type="submit" class="btn-primary">Log In</button>
+  </form>
+</div>
+
+<!-- ===== MENU (after login) ===== -->
+<div id="menuView" class="view center">
+  <div class="card">
+    <div class="logo">&#128075;</div>
+    <h1>Welcome, <span id="welcomeUser">user1</span></h1>
+    <p class="sub">Choose a dashboard to open</p>
+    <div class="menu-buttons">
+      <button class="btn-dash" id="btnDash1">&#128200; Dashboard 1</button>
+      <button class="btn-dash" id="btnDash2">&#128201; Dashboard 2</button>
+    </div>
+    <button class="btn-link" id="btnLogout">Log out</button>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="dashView" class="view">
+  <div class="topbar">
+    <h2 id="dashTitle">Dashboard</h2>
+    <div class="actions">
+      <button class="btn-back" id="btnBack">&larr; Back</button>
+      <button class="btn-exit" id="btnExit">Exit</button>
+    </div>
+  </div>
+  <iframe id="dashFrame" title="Embedded dashboard" allowfullscreen></iframe>
+</div>
+
+<script>
+  // ====== CONFIG: replace with your own public dashboard URLs ======
+  var VALID_USER = "user1";
+  var VALID_PASS = "password1";
+  var DASHBOARDS = {
+    1: { title: "Dashboard 1", url: "https://app.powerbi.com/view?r=REPLACE_WITH_PUBLIC_LINK_1" },
+    2: { title: "Dashboard 2", url: "https://app.powerbi.com/view?r=REPLACE_WITH_PUBLIC_LINK_2" }
+  };
+  // =================================================================
+
+  function $(id) { return document.getElementById(id); }
+
+  function show(id) {
+    var views = document.querySelectorAll(".view");
+    for (var i = 0; i < views.length; i++) views[i].classList.remove("active");
+    $(id).classList.add("active");
+  }
+
+  function goLogin() {
+    $("dashFrame").src = "about:blank";
+    $("username").value = "";
+    $("password").value = "";
+    $("loginError").textContent = "";
+    show("loginView");
+  }
+
+  function openDash(n) {
+    $("dashTitle").textContent = DASHBOARDS[n].title;
+    $("dashFrame").src = DASHBOARDS[n].url;
+    show("dashView");
+  }
+
+  $("loginForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var u = $("username").value.trim();
+    var p = $("password").value;
+    if (u === VALID_USER && p === VALID_PASS) {
+      $("welcomeUser").textContent = u;
+      $("loginError").textContent = "";
+      show("menuView");
+    } else {
+      $("loginError").textContent = "Invalid username or password.";
+    }
+  });
+
+  $("btnDash1").addEventListener("click", function () { openDash(1); });
+  $("btnDash2").addEventListener("click", function () { openDash(2); });
+
+  $("btnBack").addEventListener("click", function () {
+    $("dashFrame").src = "about:blank";
+    show("menuView");
+  });
+  $("btnExit").addEventListener("click", goLogin);
+  $("btnLogout").addEventListener("click", goLogin);
+</script>
+</body>
+</html>
